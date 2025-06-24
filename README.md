@@ -1,4 +1,4 @@
-# NomadPay Backend API - autodeploy
+# NomadPay Backend API
 
 Production-ready Flask backend for NomadPay with fixed authentication system.
 
