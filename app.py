@@ -21,9 +21,10 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Configure CORS for production
-CORS(app, origins=[
+CORS(app, supports_credentials=True, origins=[
     'https://nomadpay-frontend.onrender.com',
     'https://nomadpayadmin.onrender.com',
+    'https://*.manus.space',
     'http://localhost:3000',
     'http://localhost:3001'
 ])
