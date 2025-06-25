@@ -499,6 +499,79 @@ def scan_qr():
     }), 200
 
 # Admin endpoints (basic implementations)
+@app.route('/api/admin/create-admin', methods=['POST'])
+def create_admin_user():
+    """Create admin user - for initial setup only"""
+    try:
+        data = request.get_json()
+        
+        # Validate input
+        if not data or not data.get('email') or not data.get('password'):
+            return jsonify({
+                'success': False,
+                'message': 'Email and password are required'
+            }), 400
+        
+        email = data['email'].lower().strip()
+        password = data['password']
+        
+        # Check if user already exists
+        conn = sqlite3.connect(app.config['DATABASE_URL'])
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT id, role FROM users WHERE email = ?', (email,))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            user_id, current_role = existing_user
+            if current_role == 'admin':
+                conn.close()
+                return jsonify({
+                    'success': True,
+                    'message': 'User is already an admin'
+                }), 200
+            else:
+                # Update existing user to admin
+                cursor.execute('UPDATE users SET role = ? WHERE email = ?', ('admin', email))
+                conn.commit()
+                conn.close()
+                return jsonify({
+                    'success': True,
+                    'message': 'User role updated to admin successfully'
+                }), 200
+        
+        # Create new admin user
+        password_hash = generate_password_hash(password)
+        cursor.execute('''
+            INSERT INTO users (email, password_hash, role, created_at)
+            VALUES (?, ?, ?, ?)
+        ''', (email, password_hash, 'admin', datetime.utcnow().isoformat()))
+        
+        user_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        # Create default wallets
+        create_default_wallets(user_id)
+        
+        logger.info(f"Admin user created successfully: {email}")
+        return jsonify({
+            'success': True,
+            'message': 'Admin user created successfully',
+            'user': {
+                'id': str(user_id),
+                'email': email,
+                'role': 'admin'
+            }
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Admin creation error: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Admin creation failed. Please try again.'
+        }), 500
+
 @app.route('/api/admin/users', methods=['GET'])
 def get_admin_users():
     """Get users for admin dashboard"""
